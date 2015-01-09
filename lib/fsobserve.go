@@ -76,7 +76,7 @@ func (obs *Observer) Run() error {
 			select {
 			case event := <-watcher.Events:
 				if event.Op == fsnotify.Write || event.Op == fsnotify.Create {
-					if !hasPatterns || obs.IsUnderWatch(&event) {
+					if (!hasPatterns && !isHiddenPath(&event)) || obs.IsUnderWatch(&event) {
 						events = append(events, &event)
 					}
 				}
@@ -141,4 +141,8 @@ func (obs *Observer) callback(events []*fsnotify.Event, sh string, command []str
 	} else {
 		log.Printf("error: \n%v", string(errOut))
 	}
+}
+
+func isHiddenPath(ev *fsnotify.Event) bool {
+	return strings.HasPrefix(ev.Name, ".")
 }
