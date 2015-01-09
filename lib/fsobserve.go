@@ -1,7 +1,9 @@
 package fsobserve
 
 import (
+	"bytes"
 	"github.com/go-fsnotify/fsnotify"
+	"io/ioutil"
 	"log"
 	"os/exec"
 	"runtime"
@@ -102,10 +104,29 @@ func (obs *Observer) IsUnderWatch(ev *fsnotify.Event) bool {
 }
 
 func (obs *Observer) callback(events []*fsnotify.Event, sh string, command []string) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
 	cmd := exec.Command(sh, command...)
-	out, err := cmd.Output()
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	cmd.Start()
+	err := cmd.Wait()
+	if err != nil {
+		log.Println(err)
+	}
+	out, err := ioutil.ReadAll(&stdout)
 	if err != nil {
 		panic(err)
 	}
-	log.Printf("exec: %v\n%v", command[1], string(out))
+
+	errOut, err := ioutil.ReadAll(&stderr)
+	if err != nil {
+		panic(err)
+	}
+
+	if string(errOut) == "" {
+		log.Printf("exec: %v\n%v", command[1], string(out))
+	} else {
+		log.Printf("error: \n%v", string(errOut))
+	}
 }
