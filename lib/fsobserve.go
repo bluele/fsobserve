@@ -5,10 +5,16 @@ import (
 	"github.com/go-fsnotify/fsnotify"
 	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 	"time"
+)
+
+const (
+	shellKey     = "SHELL"
+	defaultShell = "sh"
 )
 
 type Observer struct {
@@ -20,6 +26,7 @@ type Config struct {
 	Dir      string
 	Patterns []string
 	Interval time.Duration
+	Shell    string
 }
 
 func NewConfig(command, dir, patterns string, interval time.Duration) *Config {
@@ -31,11 +38,16 @@ func NewConfig(command, dir, patterns string, interval time.Duration) *Config {
 		}
 		ps = append(ps, rp)
 	}
+	shell := os.Getenv(shellKey)
+	if shell == "" {
+		shell = defaultShell
+	}
 	return &Config{
 		Command:  command,
 		Dir:      dir,
 		Patterns: ps,
 		Interval: interval,
+		Shell:    shell,
 	}
 }
 
@@ -91,7 +103,7 @@ func (obs *Observer) getShell() (string, string) {
 	if runtime.GOOS == "windows" {
 		return "cmd", "/c"
 	}
-	return "sh", "-c"
+	return obs.config.Shell, "-c"
 }
 
 func (obs *Observer) IsUnderWatch(ev *fsnotify.Event) bool {
